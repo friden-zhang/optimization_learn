@@ -1,0 +1,5 @@
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 150  # Change this value to set the maximum characters per line
