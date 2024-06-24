@@ -5,7 +5,7 @@
 #include "gemm/cpu_gemm.hpp"
 #include "utilities/generate_matrix.hpp"
 
-static void BM_cpu_transport_native_gemm(benchmark::State& state) {
+static void BM_cpu_transpose_native_gemm(benchmark::State& state) {
     float lower_bound = 0.0;
     float upper_bound = 1.0;
 
@@ -36,7 +36,7 @@ static void BM_cpu_native_gemm(benchmark::State& state) {
     }
 }
 
-static void BM_cpu_transport_openmp_gemm(benchmark::State& state) {
+static void BM_cpu_transpose_openmp_gemm(benchmark::State& state) {
     float lower_bound = 0.0;
     float upper_bound = 1.0;
 
@@ -67,7 +67,7 @@ static void BM_cpu_openmp_gemm(benchmark::State& state) {
     }
 }
 
-static void BM_cpu_transport_parallel_for_each_gemm(benchmark::State& state) {
+static void BM_cpu_transpose_parallel_for_each_gemm(benchmark::State& state) {
     float lower_bound = 0.0;
     float upper_bound = 1.0;
 
@@ -100,11 +100,11 @@ static void BM_cpu_parallel_for_each_gemm(benchmark::State& state) {
     }
 }
 
-BENCHMARK(BM_cpu_transport_native_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_cpu_transpose_native_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_cpu_native_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_transport_openmp_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_cpu_transpose_openmp_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_cpu_openmp_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_transport_parallel_for_each_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_cpu_transpose_parallel_for_each_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_cpu_parallel_for_each_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();
