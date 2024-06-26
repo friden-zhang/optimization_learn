@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
-project(cuda_optimization)
+project(optimization_learn LANGUAGES CXX CUDA)
+
+
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -9,7 +14,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -g")
 
 find_package(OpenMP REQUIRED)
 find_package(TBB REQUIRED)
-
+find_package(CUDA REQUIRED)
 
 if (OpenMP_CXX_FOUND)
     message(STATUS "Found OpenMP")
@@ -42,6 +47,8 @@ endif()
 
 include_directories(include)
 
+
+add_subdirectory(src/cuda)
 add_subdirectory(test)
 add_subdirectory(benchmark)
 
