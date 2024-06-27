@@ -6,9 +6,9 @@
 #include "utilities/transpose_matrix.hpp"
 TEST(GEMM_TEST, CPU_transpose_native_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::transpose_matrix(utilities::read_csv<double>("/tmp/matrix_b_128x128.csv"));
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::transpose_matrix(utilities::read_csv<double>("/tmp/matrix_b_128x256.csv"));
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
@@ -23,9 +23,9 @@ TEST(GEMM_TEST, CPU_transpose_native_test) {
 
 TEST(GEMM_TEST, CPU_native_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x128.csv");
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x256.csv");
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
@@ -40,9 +40,9 @@ TEST(GEMM_TEST, CPU_native_test) {
 
 TEST(GEMM_TEST, CPU_transpose_openmp_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::transpose_matrix(utilities::read_csv<double>("/tmp/matrix_b_128x128.csv"));
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::transpose_matrix(utilities::read_csv<double>("/tmp/matrix_b_128x256.csv"));
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
@@ -57,9 +57,9 @@ TEST(GEMM_TEST, CPU_transpose_openmp_test) {
 
 TEST(GEMM_TEST, CPU_openmp_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x128.csv");
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x256.csv");
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
@@ -74,9 +74,9 @@ TEST(GEMM_TEST, CPU_openmp_test) {
 
 TEST(GEMM_TEST, CPU_transpose_std_parallel_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::transpose_matrix(utilities::read_csv<double>("/tmp/matrix_b_128x128.csv"));
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::transpose_matrix(utilities::read_csv<double>("/tmp/matrix_b_128x256.csv"));
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
@@ -91,9 +91,9 @@ TEST(GEMM_TEST, CPU_transpose_std_parallel_test) {
 
 TEST(GEMM_TEST, CPU_std_parallel_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x128.csv");
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x256.csv");
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
@@ -108,9 +108,9 @@ TEST(GEMM_TEST, CPU_std_parallel_test) {
 
 TEST(GEMM_TEST, GPU_native_test) {
     // Read input data
-    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x128.csv");
-    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x128.csv");
-    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x128.csv");
+    auto A = utilities::read_csv<double>("/tmp/matrix_a_128x256.csv");
+    auto B = utilities::read_csv<double>("/tmp/matrix_b_128x256.csv");
+    auto C = utilities::read_csv<double>("/tmp/matrix_c_128x256.csv");
 
     EXPECT_EQ(A.size(), B[0].size());
 
