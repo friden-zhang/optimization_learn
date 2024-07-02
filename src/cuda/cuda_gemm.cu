@@ -10,51 +10,51 @@ namespace gemm {
 namespace kernel {
 
 template <typename T>
-__global__ void native_kernel(const T* A, const T* B, T* C, int M, int N, int K) {
+__global__ void native_kernel(const T* A, const T* B, T* C, int M, int K, int N) {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (row >= M || col >= K) {
+    if (row >= M || col >= N) {
         return;
     }
 
     T value = T(0);
-    for (int e = 0; e < N; ++e) {
-        value += A[row * N + e] * B[e * K + col];
+    for (int e = 0; e < K; ++e) {
+        value += A[row * K + e] * B[e * N + col];
     }
-    C[row * K + col] = value;
+    C[row * N + col] = value;
 }
 
 template <typename T, int kTileSize>
-__global__ void shared_kernel(const T* A, const T* B, T* C, int M, int N, int K) {
+__global__ void shared_kernel(const T* A, const T* B, T* C, int M, int K, int N) {
     __shared__ T ds_A[kTileSize][kTileSize];
     __shared__ T ds_B[kTileSize][kTileSize];
 
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (row >= M || col >= K) {
+    if (row >= M || col >= N) {
         return;  // Out-of-bounds threads exit early
     }
 
     T value = T(0);
 
-    for (int e = 0; e < N; e += kTileSize) {
+    for (int e = 0; e < K; e += kTileSize) {
         // for a, a_shared_load_row is row
         // for b, b_shared_load_col is col
         int a_shared_load_col = threadIdx.x + e;
         int b_shared_load_row = threadIdx.y + e;
 
         // Load ds_A from global memory A
-        if (a_shared_load_col < N) {
-            ds_A[threadIdx.y][threadIdx.x] = A[row * N + a_shared_load_col];
+        if (a_shared_load_col < K) {
+            ds_A[threadIdx.y][threadIdx.x] = A[row * K + a_shared_load_col];
         } else {
             ds_A[threadIdx.y][threadIdx.x] = T(0);  // Padding with zero
         }
 
         // Load ds_B from global memory B
-        if (b_shared_load_row < N) {
-            ds_B[threadIdx.y][threadIdx.x] = B[b_shared_load_row * K + col];
+        if (b_shared_load_row < K) {
+            ds_B[threadIdx.y][threadIdx.x] = B[b_shared_load_row * N + col];
         } else {
             ds_B[threadIdx.y][threadIdx.x] = T(0);  // Padding with zero
         }
@@ -70,13 +70,13 @@ __global__ void shared_kernel(const T* A, const T* B, T* C, int M, int N, int K)
     }
 
     // Store the result back to global memory C
-    C[row * K + col] = value;
+    C[row * N + col] = value;
 }
 
 // TODO
 template <typename T, int kBlockM, int kBlockK, int kBlockN, int kThreadSizeY, int kThreadSizeX>
 // A -> mxk, B -> kxn, C -> mxn
-__global__ void shared_rigster_kernel(T* A, T* B, T* C, int m, int k, int n) {
+__global__ void shared_rigster_kernel(const T* A, const T* B, T* C, int M, int K, int N) {
     __shared__ T s_a[kBlockM][kBlockK];
     __shared__ T s_b[kBlockK][kBlockN];
 
@@ -100,18 +100,18 @@ __global__ void shared_rigster_kernel(T* A, T* B, T* C, int m, int k, int n) {
     const int a_tile_row_stride = kBlockThreadNum / kBlockK;
     const int b_tile_row_stride = kBlockThreadNum / kBlockN;
 
-    for (int block_k_start_index = 0; block_k_start_index < k; block_k_start_index += kBlockK) {
+    for (int block_k_start_index = 0; block_k_start_index < K; block_k_start_index += kBlockK) {
 #pragma unroll
         for (int i = 0; i < kBlockM; i += a_tile_row_stride) {
             const int row = kBlockM * blockIdx.y + i + a_tile_row;
             const int col = block_k_start_index + a_tile_col;
-            s_a[i + a_tile_row][a_tile_col] = row < m && col < k ? A[row * n + col] : 0;
+            s_a[i + a_tile_row][a_tile_col] = row < M && col < K ? A[row * K + col] : 0;
         }
 #pragma unroll
         for (int i = 0; i < kBlockK; i += b_tile_row_stride) {
             const int row = block_k_start_index + b_tile_row + i;
             const int col = blockIdx.x * kBlockN + b_tile_col;
-            s_b[b_tile_row + i][b_tile_col] = row < k && col < n ? B[row * n + col] : 0;
+            s_b[b_tile_row + i][b_tile_col] = row < K && col < N ? B[row * N + col] : 0;
         }
 
         __syncthreads();
@@ -138,8 +138,8 @@ __global__ void shared_rigster_kernel(T* A, T* B, T* C, int m, int k, int n) {
         for (int tx = 0; tx < kThreadSizeX; tx++) {
             const int row = kBlockM * blockIdx.y + kThreadSizeY * threadIdx.y + ty;
             const int col = kBlockN * blockIdx.x + kThreadSizeX * threadIdx.x + tx;
-            if (row < m && col < n) {
-                C[row * n + col] += r_c[ty][tx];
+            if (row < M && col < N) {
+                C[row * N + col] += r_c[ty][tx];
             }
         }
     }
@@ -148,15 +148,44 @@ __global__ void shared_rigster_kernel(T* A, T* B, T* C, int m, int k, int n) {
 }  // namespace kernel
 
 template <typename T>
+void cuda_gemm_cu(const T* A, const T* B, T* C, int M, int K, int N, CudaGemmAlgorithm algorithm) {
+    // Launch kernel
+    if (algorithm == CudaGemmAlgorithm::kNative) {
+        dim3 block(32, 16);
+        dim3 grid((N + block.x - 1) / block.x, (M + block.y - 1) / block.y);
+        kernel::native_kernel<<<grid, block>>>(A, B, C, M, K, N);
+    } else if (algorithm == CudaGemmAlgorithm::kShared) {
+        constexpr int kTileSize = 32;
+        dim3 block(kTileSize, kTileSize);
+        dim3 grid((N + block.x - 1) / block.x, (M + block.y - 1) / block.y);
+        kernel::shared_kernel<T, kTileSize><<<grid, block>>>(A, B, C, M, K, N);
+    } else if (algorithm == CudaGemmAlgorithm::kSharedRigster) {
+        constexpr int kBlockM = 128;
+        constexpr int kBlockK = 8;
+        constexpr int kBlockN = 128;
+        // every thread compute kThreadSizeY x kThreadN matrix
+        constexpr int kThreadSizeY = 8;
+        constexpr int kThreadSizeX = 8;
+        dim3 block(kBlockN / kThreadSizeX, kBlockM / kThreadSizeY);
+        dim3 grid((N + block.x - 1) / block.x, (M + block.y - 1) / block.y);
+        kernel::shared_rigster_kernel<T, kBlockM, kBlockK, kBlockN, kThreadSizeY, kThreadSizeX><<<grid, block>>>(A, B, C, M, K, N);
+    } else {
+        // TODO: Add other algorithms here
+        assert(false);
+    }
+    cudaDeviceSynchronize();
+}
+
+template <typename T>
 void cuda_gemm(const std::vector<std::vector<T>>& A, const std::vector<std::vector<T>>& B, std::vector<std::vector<T>>& C,
                CudaGemmAlgorithm algorithm) {
     int M = C.size();
-    int K = C[0].size();
-    int N = B.size();
+    int N = C[0].size();
+    int K = B.size();
 
-    size_t sizeA = M * N * sizeof(T);
-    size_t sizeB = N * K * sizeof(T);
-    size_t sizeC = M * K * sizeof(T);
+    size_t sizeA = M * K * sizeof(T);
+    size_t sizeB = K * N * sizeof(T);
+    size_t sizeC = M * N * sizeof(T);
 
     T *d_A, *d_B, *d_C;
 
@@ -168,38 +197,15 @@ void cuda_gemm(const std::vector<std::vector<T>>& A, const std::vector<std::vect
     for (int i = 0; i < M; ++i) {
         cudaMemcpy(d_A + i * A[i].size(), A[i].data(), A[i].size() * sizeof(T), cudaMemcpyHostToDevice);
     }
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < K; ++i) {
         cudaMemcpy(d_B + i * B[i].size(), B[i].data(), B[i].size() * sizeof(T), cudaMemcpyHostToDevice);
     }
 
-    // Launch kernel
-    if (algorithm == CudaGemmAlgorithm::kNative) {
-        dim3 block(32, 16);
-        dim3 grid((K + block.x - 1) / block.x, (M + block.y - 1) / block.y);
-        kernel::native_kernel<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
-    } else if (algorithm == CudaGemmAlgorithm::kShared) {
-        constexpr int kTileSize = 16;
-        dim3 block(kTileSize, kTileSize);
-        dim3 grid((K + block.x - 1) / block.x, (M + block.y - 1) / block.y);
-        kernel::shared_kernel<T, kTileSize><<<grid, block>>>(d_A, d_B, d_C, M, N, K);
-    } else if (algorithm == CudaGemmAlgorithm::kSharedRigster) {
-        constexpr int kBlockM = 128;
-        constexpr int kBlockK = 8;
-        constexpr int kBlockN = 128;
-        // every thread compute kThreadSizeY x kThreadN matrix
-        constexpr int kThreadSizeY = 8;
-        constexpr int kThreadSizeX = 8;
-        dim3 block(kBlockM / kThreadSizeY, kBlockN / kThreadSizeX);
-        dim3 grid((K + block.x - 1) / block.x, (M + block.y - 1) / block.y);
-        kernel::shared_rigster_kernel<T, kBlockM, kBlockK, kBlockN, kThreadSizeY, kThreadSizeX><<<grid, block>>>(d_A, d_B, d_C, M, N, K);
-    } else {
-        // TODO: Add other algorithms here
-        assert(false);
-    }
-    cudaDeviceSynchronize();
+    cuda_gemm_cu(d_A, d_B, d_C, M, K, N, algorithm);
+
     // copy result back to host
     for (int i = 0; i < M; ++i) {
-        cudaMemcpy(C[i].data(), d_C + i * K, K * sizeof(T), cudaMemcpyDeviceToHost);
+        cudaMemcpy(C[i].data(), d_C + i * N, N * sizeof(T), cudaMemcpyDeviceToHost);
     }
     cudaFree(d_A);
     cudaFree(d_B);
@@ -210,5 +216,8 @@ template void cuda_gemm<float>(const std::vector<std::vector<float>>& A, const s
                                CudaGemmAlgorithm algorithm);
 template void cuda_gemm<double>(const std::vector<std::vector<double>>& A, const std::vector<std::vector<double>>& B,
                                 std::vector<std::vector<double>>& C, CudaGemmAlgorithm algorithm);
+
+template void cuda_gemm_cu<float>(const float* A, const float* B, float* C, int M, int K, int N, CudaGemmAlgorithm algorithm);
+template void cuda_gemm_cu<double>(const double* A, const double* B, double* C, int M, int K, int N, CudaGemmAlgorithm algorithm);
 
 }  // namespace gemm

@@ -1,4 +1,5 @@
 #include <benchmark/benchmark.h>
+#include <cuda_runtime.h>
 
 #include <vector>
 
@@ -108,12 +109,34 @@ static void BM_gpu_native_gemm(benchmark::State& state) {
 
     auto B = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(1), state.range(0)});
 
-    std::vector<std::vector<float>> C(A.size(), std::vector<float>(B[0].size(), 0.0f));
+    int M = A.size();
+    int N = B[0].size();
+    int K = B.size();
+
+    size_t sizeA = M * K * sizeof(float);
+    size_t sizeB = K * N * sizeof(float);
+    size_t sizeC = M * N * sizeof(float);
+
+    float *d_A, *d_B, *d_C;
+
+    cudaMalloc(&d_A, sizeA);
+    cudaMalloc(&d_B, sizeB);
+    cudaMalloc(&d_C, sizeC);
+
+    for (int i = 0; i < M; ++i) {
+        cudaMemcpy(d_A + i * A[i].size(), A[i].data(), A[i].size() * sizeof(float), cudaMemcpyHostToDevice);
+    }
+    for (int i = 0; i < K; ++i) {
+        cudaMemcpy(d_B + i * B[i].size(), B[i].data(), B[i].size() * sizeof(float), cudaMemcpyHostToDevice);
+    }
 
     for (auto _ : state) {
-        gemm::cuda_gemm(A, B, C, gemm::CudaGemmAlgorithm::kNative);
-        benchmark::DoNotOptimize(C);
+        gemm::cuda_gemm_cu(d_A, d_B, d_C, M, K, N, gemm::CudaGemmAlgorithm::kNative);
+        benchmark::DoNotOptimize(d_C);
     }
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
 }
 
 static void BM_gpu_shared_gemm(benchmark::State& state) {
@@ -124,12 +147,34 @@ static void BM_gpu_shared_gemm(benchmark::State& state) {
 
     auto B = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(1), state.range(0)});
 
-    std::vector<std::vector<float>> C(A.size(), std::vector<float>(B[0].size(), 0.0f));
+    int M = A.size();
+    int N = B[0].size();
+    int K = B.size();
+
+    size_t sizeA = M * K * sizeof(float);
+    size_t sizeB = K * N * sizeof(float);
+    size_t sizeC = M * N * sizeof(float);
+
+    float *d_A, *d_B, *d_C;
+
+    cudaMalloc(&d_A, sizeA);
+    cudaMalloc(&d_B, sizeB);
+    cudaMalloc(&d_C, sizeC);
+
+    for (int i = 0; i < M; ++i) {
+        cudaMemcpy(d_A + i * A[i].size(), A[i].data(), A[i].size() * sizeof(float), cudaMemcpyHostToDevice);
+    }
+    for (int i = 0; i < K; ++i) {
+        cudaMemcpy(d_B + i * B[i].size(), B[i].data(), B[i].size() * sizeof(float), cudaMemcpyHostToDevice);
+    }
 
     for (auto _ : state) {
-        gemm::cuda_gemm(A, B, C, gemm::CudaGemmAlgorithm::kShared);
-        benchmark::DoNotOptimize(C);
+        gemm::cuda_gemm_cu(d_A, d_B, d_C, M, K, N, gemm::CudaGemmAlgorithm::kShared);
+        benchmark::DoNotOptimize(d_C);
     }
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
 }
 
 static void BM_gpu_shared_rigster_gemm(benchmark::State& state) {
@@ -140,12 +185,34 @@ static void BM_gpu_shared_rigster_gemm(benchmark::State& state) {
 
     auto B = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(1), state.range(0)});
 
-    std::vector<std::vector<float>> C(A.size(), std::vector<float>(B[0].size(), 0.0f));
+    int M = A.size();
+    int N = B[0].size();
+    int K = B.size();
+
+    size_t sizeA = M * K * sizeof(float);
+    size_t sizeB = K * N * sizeof(float);
+    size_t sizeC = M * N * sizeof(float);
+
+    float *d_A, *d_B, *d_C;
+
+    cudaMalloc(&d_A, sizeA);
+    cudaMalloc(&d_B, sizeB);
+    cudaMalloc(&d_C, sizeC);
+
+    for (int i = 0; i < M; ++i) {
+        cudaMemcpy(d_A + i * A[i].size(), A[i].data(), A[i].size() * sizeof(float), cudaMemcpyHostToDevice);
+    }
+    for (int i = 0; i < K; ++i) {
+        cudaMemcpy(d_B + i * B[i].size(), B[i].data(), B[i].size() * sizeof(float), cudaMemcpyHostToDevice);
+    }
 
     for (auto _ : state) {
-        gemm::cuda_gemm(A, B, C, gemm::CudaGemmAlgorithm::kSharedRigster);
-        benchmark::DoNotOptimize(C);
+        gemm::cuda_gemm_cu(d_A, d_B, d_C, M, K, N, gemm::CudaGemmAlgorithm::kSharedRigster);
+        benchmark::DoNotOptimize(d_C);
     }
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
 }
 
 // BENCHMARK(BM_cpu_transpose_native_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
@@ -154,8 +221,8 @@ static void BM_gpu_shared_rigster_gemm(benchmark::State& state) {
 // BENCHMARK(BM_cpu_openmp_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
 // BENCHMARK(BM_cpu_transpose_parallel_for_each_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
 // BENCHMARK(BM_cpu_parallel_for_each_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_gpu_native_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(100);
-BENCHMARK(BM_gpu_shared_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(100);
-BENCHMARK(BM_gpu_shared_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(100);
+BENCHMARK(BM_gpu_native_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
+BENCHMARK(BM_gpu_shared_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
+BENCHMARK(BM_gpu_shared_rigster_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
 
 BENCHMARK_MAIN();
