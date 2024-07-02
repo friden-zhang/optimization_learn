@@ -6,6 +6,8 @@ namespace gemm {
 
 enum class CudaGemmAlgorithm {
     kNative,
+    kShared,
+    kSharedRigster,
 };
 
 template <typename T>

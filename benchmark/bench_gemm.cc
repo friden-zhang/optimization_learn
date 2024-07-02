@@ -116,12 +116,46 @@ static void BM_gpu_native_gemm(benchmark::State& state) {
     }
 }
 
-BENCHMARK(BM_cpu_transpose_native_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_native_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_transpose_openmp_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_openmp_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_transpose_parallel_for_each_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_cpu_parallel_for_each_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_gpu_native_gemm)->Args({1024, 2048})->Unit(benchmark::kMillisecond);
+static void BM_gpu_shared_gemm(benchmark::State& state) {
+    float lower_bound = 0.0;
+    float upper_bound = 1.0;
+
+    auto A = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(0), state.range(1)});
+
+    auto B = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(1), state.range(0)});
+
+    std::vector<std::vector<float>> C(A.size(), std::vector<float>(B[0].size(), 0.0f));
+
+    for (auto _ : state) {
+        gemm::cuda_gemm(A, B, C, gemm::CudaGemmAlgorithm::kShared);
+        benchmark::DoNotOptimize(C);
+    }
+}
+
+static void BM_gpu_shared_rigster_gemm(benchmark::State& state) {
+    float lower_bound = 0.0;
+    float upper_bound = 1.0;
+
+    auto A = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(0), state.range(1)});
+
+    auto B = utilities::generate_random_matrix<float, 2, int64_t>(lower_bound, upper_bound, {state.range(1), state.range(0)});
+
+    std::vector<std::vector<float>> C(A.size(), std::vector<float>(B[0].size(), 0.0f));
+
+    for (auto _ : state) {
+        gemm::cuda_gemm(A, B, C, gemm::CudaGemmAlgorithm::kSharedRigster);
+        benchmark::DoNotOptimize(C);
+    }
+}
+
+// BENCHMARK(BM_cpu_transpose_native_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_cpu_native_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_cpu_transpose_openmp_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_cpu_openmp_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_cpu_transpose_parallel_for_each_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_cpu_parallel_for_each_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_gpu_native_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(100);
+BENCHMARK(BM_gpu_shared_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(100);
+BENCHMARK(BM_gpu_shared_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(100);
 
 BENCHMARK_MAIN();
