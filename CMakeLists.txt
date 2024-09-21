@@ -16,6 +16,8 @@ find_package(OpenMP REQUIRED)
 find_package(TBB REQUIRED)
 find_package(CUDA REQUIRED)
 
+include_directories(${CUDA_INCLUDE_DIRS})
+
 if (OpenMP_CXX_FOUND)
     message(STATUS "Found OpenMP")
     message(STATUS "OpenMP_CXX_FLAGS: ${OpenMP_CXX_FLAGS}")
