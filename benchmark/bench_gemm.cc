@@ -223,4 +223,4 @@ static void BM_gpu_shared_rigster_gemm(benchmark::State& state) {
 // BENCHMARK(BM_cpu_parallel_for_each_gemm)->Args({4096, 2048})->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_gpu_native_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
 BENCHMARK(BM_gpu_shared_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
-BENCHMARK(BM_gpu_shared_rigster_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
+// BENCHMARK(BM_gpu_shared_rigster_gemm)->Args({4096, 4096})->Unit(benchmark::kMillisecond)->Iterations(10);
